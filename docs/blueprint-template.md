@@ -22,14 +22,15 @@
 ## 3. Technical Evidence (Group)
 
 ### 3.1 Logging & Tracing
-- \[EVIDENCE_CORRELATION_ID_SCREENSHOT\]: docs/screenshot_correlation_id.png
-- \[EVIDENCE_PII_REDACTION_SCREENSHOT\]: docs/screenshot_pii_redaction.png
-- \[EVIDENCE_TRACE_WATERFALL_SCREENSHOT\]: docs/screenshot_trace_waterfall.jpg
-- \[TRACE_WATERFALL_EXPLANATION\]: The trace waterfall shows two main spans: mock_rag.retrieve (~150ms normal, ~2500ms during rag_slow incident) and mock_llm.generate (~80ms). When rag_slow is injected, the retrieve span dominates total latency (~2660ms), proving the bottleneck is the RAG retrieval layer rather than LLM generation or schema validation.
+- `[EVIDENCE_CORRELATION_ID_SCREENSHOT]`: [Correlation ID screenshot](screenshot_correlation_id.png)
+- `[EVIDENCE_PII_REDACTION_SCREENSHOT]`: [PII redaction screenshot](screenshot_pii_redaction.png)
+- `[EVIDENCE_TRACE_WATERFALL_SCREENSHOT]`: [Trace waterfall screenshot](screenshot_trace_waterfall.jpg)
+- `[TRACE_WATERFALL_EXPLANATION]`: The trace waterfall shows two main spans: `mock_rag.retrieve` (~150ms normal, ~2500ms during `rag_slow` incident) and `mock_llm.generate` (~80ms). When `rag_slow` is injected, the retrieve span dominates total latency (~2660ms), proving the bottleneck is the RAG retrieval layer rather than LLM generation or schema validation.
 
 ### 3.2 Dashboard & SLOs
-- \[DASHBOARD_6_PANELS_SCREENSHOT\]: docs/dashboard-6-panels.png
-- \[SLO_TABLE\]:
+- `[DASHBOARD_6_PANELS_SCREENSHOT]`: [6-panel dashboard screenshot](dashboard-6-panels.png)
+- `[SLO_TABLE]`:
+
 | SLI | Target | Window | Current Value |
 |---|---:|---|---:|
 | Latency P95 | < 3000ms | 28d | 2650ms |
@@ -38,8 +39,8 @@
 | Quality Score Avg | >= 0.75 | 28d | 0.90 |
 
 ### 3.3 Alerts & Runbook
-- \[ALERT_RULES_SCREENSHOT\]: config/alert_rules.yaml
-- \[SAMPLE_RUNBOOK_LINK\]: docs/alerts.md#1-high-latency-p95
+- `[ALERT_RULES_SCREENSHOT]`: [Alert rules config](../config/alert_rules.yaml)
+- `[SAMPLE_RUNBOOK_LINK]`: [High latency P95 runbook](alerts.md#1-high-latency-p95)
 
 ---
 
