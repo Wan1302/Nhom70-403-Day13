@@ -55,16 +55,16 @@
 ## 5. Individual Contributions & Evidence
 
 ### 2A202600080 - Hồ Trần Đình Nguyên
-- [TASKS_COMPLETED]: Implement Correlation ID middleware, PII scrubbing processor, bổ sung PII patterns (passport, địa chỉ VN)
-- [EVIDENCE_LINK]: https://github.com/Wan1302/Nhom70-403-Day13/commit/0ffe61a
+- [TASKS_COMPLETED]: (1) Implement Correlation ID middleware trong `app/middleware.py`: clear context vars trước mỗi request, generate `req-<8hex>` nếu client không gửi `x-request-id`, bind vào structlog context, gán `x-request-id` và `x-response-time-ms` vào response headers. (2) Bật PII scrubbing processor trong `app/logging_config.py`: đăng ký `scrub_event` vào structlog pipeline trước `JsonlFileProcessor` để lọc PII trước khi ghi log. (3) Bổ sung PII patterns trong `app/pii.py`: thêm `passport_vn` (regex `[A-Z]\d{7}`) và `address_vn` (nhận diện địa chỉ tiếng Việt theo từ khóa đường/phường/quận...). (4) Điền blueprint mục 1, 3.1, 3.3 và thu thập screenshots bằng chứng.
+- [EVIDENCE_LINK]: [commit 0ffe61a](https://github.com/Wan1302/Nhom70-403-Day13/commit/0ffe61a), [commit 23b2be5](https://github.com/Wan1302/Nhom70-403-Day13/commit/23b2be5)
 
 ### 2A202600081 - Hồ Trọng Duy Quang
 - [TASKS_COMPLETED]: Implemented `/chat` log enrichment by binding `user_id_hash`, `session_id`, `feature`, `model`, and `env` into structlog context variables; verified that API logs contain correlation context without exposing raw user identifiers; finalized SLO targets in `config/slo.yaml`; reviewed and expanded alert rules in `config/alert_rules.yaml`; updated runbook details in `docs/alerts.md`.
-- [EVIDENCE_LINK]: https://github.com/Wan1302/Nhom70-403-Day13/commit/cff3ba7a55c4ac5097a7011ef6a545bb19f2f855
+- [EVIDENCE_LINK]: [commit cff3ba7](https://github.com/Wan1302/Nhom70-403-Day13/commit/cff3ba7a55c4ac5097a7011ef6a545bb19f2f855)
 
 ### 2A202600057 - Hồ Đắc Toàn
 - [TASKS_COMPLETED]: (1) Added load_dotenv() to app/main.py to ensure Langfuse keys are loaded from .env, enabling tracing_enabled=true. (2) Added quality_score field to response_sent log event so Panel 6 of the dashboard has data. (3) Ran load_test.py (--concurrency 5, 3 rounds = 30 baseline requests) to generate sufficient log data and Langfuse traces. (4) Injected and analysed rag_slow incident: confirmed latency spike P95 150ms → 2651ms via metrics, verified error rate stayed 0%, then disabled incident and confirmed recovery. (5) Built scripts/build_dashboard.py — a 6-panel matplotlib dashboard (Latency P50/P95/P99, Traffic, Error Rate, Cost, Tokens In/Out, Quality Score) with SLO threshold lines; output saved to docs/dashboard-6-panels.png. (6) Ran python scripts/validate_logs.py → 100/100 with all 4 checks PASSED. (7) Completed blueprint-template.md: filled TOTAL_TRACES_COUNT, EVIDENCE_TRACE_WATERFALL_SCREENSHOT, TRACE_WATERFALL_EXPLANATION, and Member C contribution section.
-- [EVIDENCE_LINK]: https://github.com/Wan1302/Nhom70-403-Day13/commit/a685db8
+- [EVIDENCE_LINK]: [commit a685db8](https://github.com/Wan1302/Nhom70-403-Day13/commit/a685db8)
 
 ---
 
