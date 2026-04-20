@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 13 Observability Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #16181d;
+      --muted: #667085;
+      --line: #d8dde8;
+      --ok: #27845f;
+      --warn: #c55f18;
+      --bad: #c43d4b;
+      --blue: #2468c9;
+      --cyan: #008a9b;
+      --gold: #b7791f;
+      --green: #2f8f46;
+      --red: #d04444;
+      --magenta: #a03a7d;
+      --ink: #252a33;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      padding: 18px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(22, 24, 29, 0.06);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 760;
+    }
+
+    .header-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      min-width: min(100%, 420px);
+      color: var(--muted);
+      font-size: 0.83rem;
+    }
+
+    #status {
+      font-weight: 720;
+    }
+
+    .status-ok { color: var(--ok); }
+    .status-err { color: var(--bad); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .panel {
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      box-shadow: 0 8px 24px rgba(22, 24, 29, 0.06);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+      min-height: 38px;
+    }
+
+    .panel-title {
+      font-size: 0.75rem;
+      font-weight: 760;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .metric {
+      margin-top: 2px;
+      font-size: 1rem;
+      font-weight: 760;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .slo-badge {
+      flex: 0 0 auto;
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 0.69rem;
+      font-weight: 760;
+      border: 1px solid transparent;
+    }
+
+    .slo-ok {
+      background: #e7f5ee;
+      border-color: #b7e2cd;
+      color: var(--ok);
+    }
+
+    .slo-warn {
+      background: #fff0ed;
+      border-color: #fac5bd;
+      color: var(--bad);
+    }
+
+    canvas {
+      width: 100%;
+      height: 218px;
+      display: block;
+    }
+
+    .meta {
+      min-height: 18px;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 1060px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 12px; }
+      header { align-items: flex-start; }
+      .grid { grid-template-columns: 1fr; }
+      .header-right { justify-content: flex-start; }
+      canvas { height: 205px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Day 13 Observability Lab - Live Dashboard</h1>
+    <div class="header-right">
+      <span id="status">Connecting...</span>
+      <span id="last-update">Last update: never</span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Latency P50 / P95 / P99</div>
+          <div id="metric-latency" class="metric">0 / 0 / 0 ms</div>
+        </div>
+        <span id="badge-latency" class="slo-badge slo-ok">SLO &lt; 3000 ms</span>
+      </div>
+      <canvas id="chart-latency"></canvas>
+      <div class="meta">Threshold: P95 under 3000 ms.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Traffic</div>
+          <div id="metric-traffic" class="metric">0 requests</div>
+        </div>
+      </div>
+      <canvas id="chart-traffic"></canvas>
+      <div class="meta">Requests per refresh interval.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Error Rate</div>
+          <div id="metric-error" class="metric">0.00%</div>
+        </div>
+        <span id="badge-error" class="slo-badge slo-ok">SLO &lt; 2%</span>
+      </div>
+      <canvas id="chart-error"></canvas>
+      <div id="error-breakdown" class="meta">No errors recorded.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Cost</div>
+          <div id="metric-cost" class="metric">$0.0000 total</div>
+        </div>
+      </div>
+      <canvas id="chart-cost"></canvas>
+      <div class="meta">Cumulative spend from the in-memory metric snapshot.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Tokens In / Out</div>
+          <div id="metric-tokens" class="metric">0 in / 0 out</div>
+        </div>
+      </div>
+      <canvas id="chart-tokens"></canvas>
+      <div class="meta">Token deltas per refresh interval.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Quality Score</div>
+          <div id="metric-quality" class="metric">0.00 avg</div>
+        </div>
+        <span id="badge-quality" class="slo-badge slo-warn">SLO &gt; 0.75</span>
+      </div>
+      <canvas id="chart-quality"></canvas>
+      <div class="meta">Heuristic answer quality from the agent pipeline.</div>
+    </section>
+  </main>
+
+  <script>
+    const REFRESH_MS = 15000;
+    const MAX_POINTS = 60;
+    const SLO_LATENCY_MS = 3000;
+    const SLO_ERROR_PCT = 2;
+    const SLO_QUALITY = 0.75;
+    const BUDGET_USD = 2.5;
+
+    const queryMetricsUrl = new URLSearchParams(window.location.search).get("metrics_url");
+    const sameOriginMetricsUrl = window.location.protocol.startsWith("http")
+      ? new URL("/metrics", window.location.origin).toString()
+      : "http://127.0.0.1:8000/metrics";
+    const METRICS_URL = queryMetricsUrl || sameOriginMetricsUrl;
+
+    const colors = {
+      text: "#16181d",
+      muted: "#667085",
+      grid: "#d8dde8",
+      blue: "#2468c9",
+      cyan: "#008a9b",
+      gold: "#b7791f",
+      green: "#2f8f46",
+      red: "#d04444",
+      magenta: "#a03a7d",
+      threshold: "#c43d4b"
+    };
+
+    const state = {
+      labels: [],
+      p50: [],
+      p95: [],
+      p99: [],
+      traffic: [],
+      errorRate: [],
+      totalCost: [],
+      tokensIn: [],
+      tokensOut: [],
+      quality: []
+    };
+
+    let previous = null;
+    let lastBreakdown = {};
+
+    function sumValues(obj) {
+      return Object.values(obj || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+    }
+
+    function num(value, fallback = 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function push(series, value) {
+      series.push(value);
+      if (series.length > MAX_POINTS) series.shift();
+    }
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value;
+    }
+
+    function setBadge(id, ok) {
+      const el = document.getElementById(id);
+      el.className = "slo-badge " + (ok ? "slo-ok" : "slo-warn");
+    }
+
+    function setupCanvas(canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * ratio));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    function niceMax(value) {
+      if (value <= 1) return 1;
+      const exp = Math.pow(10, Math.floor(Math.log10(value)));
+      return Math.ceil(value / exp) * exp;
+    }
+
+    function drawBase(ctx, width, height, yMax, yMin, unit) {
+      const area = { left: 48, right: 14, top: 16, bottom: 32 };
+      const plotW = width - area.left - area.right;
+      const plotH = height - area.top - area.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      ctx.font = "11px Segoe UI, Arial";
+      ctx.fillStyle = colors.muted;
+
+      for (let i = 0; i <= 4; i += 1) {
+        const y = area.top + (plotH * i) / 4;
+        const value = yMax - ((yMax - yMin) * i) / 4;
+        ctx.beginPath();
+        ctx.moveTo(area.left, y);
+        ctx.lineTo(width - area.right, y);
+        ctx.stroke();
+        ctx.fillText(formatAxis(value, unit), 4, y + 4);
+      }
+
+      const lastLabels = state.labels;
+      const step = Math.max(1, Math.ceil(lastLabels.length / 4));
+      lastLabels.forEach((label, index) => {
+        if (index % step !== 0 && index !== lastLabels.length - 1) return;
+        const x = area.left + (plotW * index) / Math.max(1, lastLabels.length - 1);
+        ctx.fillText(label, Math.min(width - area.right - 50, Math.max(area.left - 8, x - 18)), height - 10);
+      });
+
+      return { area, plotW, plotH };
+    }
+
+    function formatAxis(value, unit) {
+      if (unit === "usd") return "$" + value.toFixed(value < 1 ? 3 : 1);
+      if (unit === "pct") return value.toFixed(value < 10 ? 1 : 0) + "%";
+      if (unit === "score") return value.toFixed(2);
+      return Math.round(value).toString();
+    }
+
+    function drawThreshold(ctx, area, plotW, plotH, yMin, yMax, threshold, label) {
+      if (threshold < yMin || threshold > yMax) return;
+      const y = area.top + plotH - ((threshold - yMin) / (yMax - yMin || 1)) * plotH;
+      ctx.save();
+      ctx.strokeStyle = colors.threshold;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(area.left, y);
+      ctx.lineTo(area.left + plotW, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = colors.threshold;
+      ctx.font = "11px Segoe UI, Arial";
+      ctx.fillText(label, area.left + 5, Math.max(area.top + 12, y - 5));
+      ctx.restore();
+    }
+
+    function drawLegend(ctx, datasets, width) {
+      let x = 52;
+      const y = 11;
+      ctx.font = "11px Segoe UI, Arial";
+      datasets.forEach((ds) => {
+        ctx.fillStyle = ds.color;
+        ctx.fillRect(x, y - 7, 10, 3);
+        ctx.fillStyle = colors.muted;
+        ctx.fillText(ds.label, x + 14, y - 3);
+        x += Math.min(120, ctx.measureText(ds.label).width + 32);
+        if (x > width - 110) x = 52;
+      });
+    }
+
+    function drawLineChart(canvasId, datasets, options = {}) {
+      const canvas = document.getElementById(canvasId);
+      const { ctx, width, height } = setupCanvas(canvas);
+      const allValues = datasets.flatMap((ds) => ds.values);
+      const yMin = options.yMin ?? 0;
+      const baseMax = Math.max(options.threshold || 0, ...allValues, options.yMax || 0, 1);
+      const yMax = options.yMax ?? niceMax(baseMax * 1.08);
+      const { area, plotW, plotH } = drawBase(ctx, width, height, yMax, yMin, options.unit);
+
+      if (options.threshold !== undefined) {
+        drawThreshold(ctx, area, plotW, plotH, yMin, yMax, options.threshold, options.thresholdLabel);
+      }
+
+      datasets.forEach((ds) => {
+        ctx.save();
+        ctx.strokeStyle = ds.color;
+        ctx.fillStyle = ds.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ds.values.forEach((value, index) => {
+          const x = area.left + (plotW * index) / Math.max(1, ds.values.length - 1);
+          const y = area.top + plotH - ((value - yMin) / (yMax - yMin || 1)) * plotH;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ds.values.forEach((value, index) => {
+          const x = area.left + (plotW * index) / Math.max(1, ds.values.length - 1);
+          const y = area.top + plotH - ((value - yMin) / (yMax - yMin || 1)) * plotH;
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      });
+
+      drawLegend(ctx, datasets, width);
+    }
+
+    function drawBarChart(canvasId, datasets, options = {}) {
+      const canvas = document.getElementById(canvasId);
+      const { ctx, width, height } = setupCanvas(canvas);
+      const points = Math.max(1, state.labels.length);
+      const stackedValues = Array.from({ length: points }, (_, index) =>
+        datasets.reduce((sum, ds) => sum + num(ds.values[index]), 0)
+      );
+      const yMin = 0;
+      const yMax = options.yMax ?? niceMax(Math.max(...stackedValues, 1) * 1.15);
+      const { area, plotW, plotH } = drawBase(ctx, width, height, yMax, yMin, options.unit);
+      const groupW = plotW / points;
+      const barW = Math.max(5, Math.min(28, groupW * 0.58));
+
+      for (let index = 0; index < points; index += 1) {
+        let stacked = 0;
+        datasets.forEach((ds) => {
+          const value = num(ds.values[index]);
+          const x = area.left + groupW * index + (groupW - barW) / 2;
+          const y = area.top + plotH - ((stacked + value) / (yMax || 1)) * plotH;
+          const h = (value / (yMax || 1)) * plotH;
+          ctx.fillStyle = ds.color;
+          ctx.fillRect(x, y, barW, Math.max(1, h));
+          stacked += value;
+        });
+      }
+
+      drawLegend(ctx, datasets, width);
+    }
+
+    function redrawAll() {
+      drawLineChart("chart-latency", [
+        { label: "P50", values: state.p50, color: colors.green },
+        { label: "P95", values: state.p95, color: colors.gold },
+        { label: "P99", values: state.p99, color: colors.magenta }
+      ], { threshold: SLO_LATENCY_MS, thresholdLabel: "SLO 3000 ms" });
+
+      drawBarChart("chart-traffic", [
+        { label: "Requests", values: state.traffic, color: colors.blue }
+      ]);
+
+      drawLineChart("chart-error", [
+        { label: "Error rate", values: state.errorRate, color: colors.red }
+      ], { threshold: SLO_ERROR_PCT, thresholdLabel: "SLO 2%", unit: "pct" });
+
+      drawLineChart("chart-cost", [
+        { label: "Total cost", values: state.totalCost, color: colors.gold }
+      ], { threshold: BUDGET_USD, thresholdLabel: "Budget $2.5", unit: "usd" });
+
+      drawBarChart("chart-tokens", [
+        { label: "Tokens in", values: state.tokensIn, color: colors.cyan },
+        { label: "Tokens out", values: state.tokensOut, color: colors.magenta }
+      ]);
+
+      drawLineChart("chart-quality", [
+        { label: "Quality avg", values: state.quality, color: colors.green }
+      ], { yMax: 1, threshold: SLO_QUALITY, thresholdLabel: "SLO 0.75", unit: "score" });
+    }
+
+    function updateBreakdown(breakdown) {
+      const entries = Object.entries(breakdown || {});
+      lastBreakdown = breakdown || {};
+      if (!entries.length) {
+        setText("error-breakdown", "No errors recorded.");
+        return;
+      }
+      setText(
+        "error-breakdown",
+        entries.map(([name, count]) => `${name}: ${count}`).join(" | ")
+      );
+    }
+
+    async function fetchAndUpdate() {
+      let snap;
+      try {
+        const response = await fetch(METRICS_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        snap = await response.json();
+      } catch (error) {
+        const status = document.getElementById("status");
+        status.textContent = `Cannot reach ${METRICS_URL}`;
+        status.className = "status-err";
+        setText("last-update", "Start the FastAPI app, then open http://127.0.0.1:8000/dashboard");
+        redrawAll();
+        return;
+      }
+
+      const now = new Date().toLocaleTimeString();
+      const errorsTotal = sumValues(snap.error_breakdown);
+      const prevErrorsTotal = previous ? sumValues(previous.error_breakdown) : 0;
+      const successTotal = num(snap.traffic);
+      const prevSuccessTotal = previous ? num(previous.traffic) : 0;
+      const requestDelta = Math.max(0, (successTotal - prevSuccessTotal) + (errorsTotal - prevErrorsTotal));
+      const errorDelta = Math.max(0, errorsTotal - prevErrorsTotal);
+      const errorRate = requestDelta > 0 ? Number(((errorDelta / requestDelta) * 100).toFixed(2)) : 0;
+      const tokensInDelta = Math.max(0, num(snap.tokens_in_total) - (previous ? num(previous.tokens_in_total) : 0));
+      const tokensOutDelta = Math.max(0, num(snap.tokens_out_total) - (previous ? num(previous.tokens_out_total) : 0));
+
+      push(state.labels, now);
+      push(state.p50, num(snap.latency_p50));
+      push(state.p95, num(snap.latency_p95));
+      push(state.p99, num(snap.latency_p99));
+      push(state.traffic, requestDelta);
+      push(state.errorRate, errorRate);
+      push(state.totalCost, num(snap.total_cost_usd));
+      push(state.tokensIn, tokensInDelta);
+      push(state.tokensOut, tokensOutDelta);
+      push(state.quality, num(snap.quality_avg));
+
+      document.getElementById("status").textContent = `Live from ${METRICS_URL}`;
+      document.getElementById("status").className = "status-ok";
+      setText("last-update", `Last update: ${now}`);
+      setText("metric-latency", `${Math.round(num(snap.latency_p50))} / ${Math.round(num(snap.latency_p95))} / ${Math.round(num(snap.latency_p99))} ms`);
+      setText("metric-traffic", `${requestDelta} requests`);
+      setText("metric-error", `${errorRate.toFixed(2)}%`);
+      setText("metric-cost", `$${num(snap.total_cost_usd).toFixed(4)} total`);
+      setText("metric-tokens", `${tokensInDelta} in / ${tokensOutDelta} out`);
+      setText("metric-quality", `${num(snap.quality_avg).toFixed(2)} avg`);
+      updateBreakdown(snap.error_breakdown);
+
+      setBadge("badge-latency", num(snap.latency_p95) <= SLO_LATENCY_MS);
+      setBadge("badge-error", errorRate <= SLO_ERROR_PCT);
+      setBadge("badge-quality", num(snap.quality_avg) >= SLO_QUALITY);
+
+      previous = snap;
+      redrawAll();
+    }
+
+    window.addEventListener("resize", redrawAll);
+    updateBreakdown(lastBreakdown);
+    redrawAll();
+    fetchAndUpdate();
+    setInterval(fetchAndUpdate, REFRESH_MS);
+  </script>
+</body>
+</html>

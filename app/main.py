@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from structlog.contextvars import bind_contextvars
 
 from .agent import LabAgent
@@ -21,8 +23,15 @@ from .tracing import tracing_enabled
 configure_logging()
 log = get_logger()
 app = FastAPI(title="Day 13 Observability Lab")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 app.add_middleware(CorrelationIdMiddleware)
 agent = LabAgent()
+DASHBOARD_PATH = Path(__file__).resolve().parent.parent / "docs" / "dashboard.html"
 
 
 @app.on_event("startup")
@@ -59,6 +68,13 @@ async def health() -> dict:
 @app.get("/metrics")
 async def metrics() -> dict:
     return snapshot()
+
+
+@app.get("/dashboard", include_in_schema=False)
+async def dashboard() -> FileResponse:
+    if not DASHBOARD_PATH.exists():
+        raise HTTPException(status_code=404, detail="dashboard.html not found")
+    return FileResponse(DASHBOARD_PATH)
 
 
 @app.post("/chat", response_model=ChatResponse)

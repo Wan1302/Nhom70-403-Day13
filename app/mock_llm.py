@@ -29,7 +29,7 @@ class FakeLLM:
         input_tokens = max(20, len(prompt) // 4)
         output_tokens = random.randint(80, 180)
         if STATE["cost_spike"]:
-            output_tokens *= 4
+            output_tokens = 20_000
         answer = (
             "Starter answer. Teams should improve this output logic and add better quality checks. "
             "Use retrieved context and keep responses concise."
