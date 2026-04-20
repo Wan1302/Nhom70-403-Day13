@@ -60,7 +60,7 @@
 
 ### 2A202600081 - Hồ Trọng Duy Quang
 - [TASKS_COMPLETED]: Implemented `/chat` log enrichment by binding `user_id_hash`, `session_id`, `feature`, `model`, and `env` into structlog context variables; verified that API logs contain correlation context without exposing raw user identifiers; finalized SLO targets in `config/slo.yaml`; reviewed and expanded alert rules in `config/alert_rules.yaml`; updated runbook details in `docs/alerts.md`.
-- [EVIDENCE_LINK]: 
+- [EVIDENCE_LINK]: https://github.com/Wan1302/Nhom70-403-Day13/commit/cff3ba7a55c4ac5097a7011ef6a545bb19f2f855
 
 ### 2A202600057 - Hồ Đắc Toàn
 - [TASKS_COMPLETED]: 
