@@ -35,6 +35,22 @@ async def startup() -> None:
     )
 
 
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    if tracing_enabled():
+        from langfuse import Langfuse
+        Langfuse().flush()
+
+
+@app.post("/admin/flush")
+async def admin_flush() -> dict:
+    """Force-flush Langfuse trace buffer — useful on Windows where shutdown hook may not fire."""
+    if tracing_enabled():
+        from langfuse import Langfuse
+        Langfuse().flush()
+    return {"ok": True, "tracing_enabled": tracing_enabled()}
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"ok": True, "tracing_enabled": tracing_enabled(), "incidents": status()}
